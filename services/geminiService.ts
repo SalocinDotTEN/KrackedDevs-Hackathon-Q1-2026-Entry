@@ -7,8 +7,14 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
 export const getSmartDoctorMatch = async (symptoms: string): Promise<MatchResult> => {
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
-    contents: `Analyze these symptoms: "${symptoms}". Suggest the most appropriate medical specialty from this list: ${Object.values(Specialty).join(', ')}. Provide a short reasoning and an urgency level (Low, Medium, High).`,
+    contents: `Analyze these symptoms: "${symptoms}". 
+    1. Suggest the most appropriate medical specialty from this list: ${Object.values(Specialty).join(', ')}. 
+    2. Search for the top-rated hospitals or specialized clinics in Malaysia (e.g., Kuala Lumpur, Selangor, Penang) that are specifically known for treating these issues. 
+    3. Return a short reasoning and an urgency level (Low, Medium, High).
+    
+    In the JSON, include a 'suggestedFacilities' array with the top 3 real-world Malaysian facilities found.`,
     config: {
+      tools: [{ googleSearch: {} }],
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
@@ -25,14 +31,39 @@ export const getSmartDoctorMatch = async (symptoms: string): Promise<MatchResult
             type: Type.STRING,
             enum: ["Low", "Medium", "High"],
             description: "Suggested medical urgency."
+          },
+          suggestedFacilities: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                name: { type: Type.STRING },
+                type: { type: Type.STRING },
+                highlight: { type: Type.STRING, description: "One sentence on why this facility is relevant." }
+              },
+              required: ["name", "type", "highlight"]
+            }
           }
         },
-        required: ["recommendedSpecialty", "reasoning", "urgency"]
+        required: ["recommendedSpecialty", "reasoning", "urgency", "suggestedFacilities"]
       }
     }
   });
 
-  return JSON.parse(response.text || '{}') as MatchResult;
+  const parsed = JSON.parse(response.text || '{}');
+  
+  // Extract real search sources for grounding requirement
+  const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks
+    ?.filter(chunk => chunk.web)
+    .map(chunk => ({
+      title: chunk.web?.title || 'Medical Reference',
+      uri: chunk.web?.uri || ''
+    })) || [];
+
+  return {
+    ...parsed,
+    searchSources: sources
+  } as MatchResult;
 };
 
 export interface NavigationAdvice {

@@ -44,8 +44,16 @@ export interface Appointment {
   remindersSet: boolean;
 }
 
+export interface SuggestedFacility {
+  name: string;
+  type: string;
+  highlight: string;
+}
+
 export interface MatchResult {
   recommendedSpecialty: Specialty;
   reasoning: string;
   urgency: 'Low' | 'Medium' | 'High';
+  suggestedFacilities: SuggestedFacility[];
+  searchSources: { title: string; uri: string }[];
 }

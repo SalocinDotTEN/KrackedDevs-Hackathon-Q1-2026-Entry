@@ -34,6 +34,8 @@ export interface TranslationStrings {
     allHospitals: string;
     allDays: string;
     viewProfile: string;
+    realWorldSuggestions: string;
+    visitSite: string;
   };
   profile: {
     education: string;
@@ -99,7 +101,9 @@ export const translations: Record<Language, TranslationStrings> = {
       filterByDay: "Filter by Day",
       allHospitals: "All Hospitals",
       allDays: "All Days",
-      viewProfile: "View Detailed Profile"
+      viewProfile: "View Detailed Profile",
+      realWorldSuggestions: "Verified Malaysian Centers",
+      visitSite: "Visit Official Site"
     },
     profile: {
       education: "Educational Background",
@@ -163,7 +167,9 @@ export const translations: Record<Language, TranslationStrings> = {
       filterByDay: "Tapis mengikut Hari",
       allHospitals: "Semua Hospital",
       allDays: "Semua Hari",
-      viewProfile: "Lihat Profil Terperinci"
+      viewProfile: "Lihat Profil Terperinci",
+      realWorldSuggestions: "Pusat Perubatan Malaysia Yang Disahkan",
+      visitSite: "Layari Laman Rasmi"
     },
     profile: {
       education: "Latar Belakang Pendidikan",
@@ -227,7 +233,9 @@ export const translations: Record<Language, TranslationStrings> = {
       filterByDay: "按天筛选",
       allHospitals: "所有医院",
       allDays: "所有日期",
-      viewProfile: "查看详细资料"
+      viewProfile: "查看详细资料",
+      realWorldSuggestions: "经过验证的马来西亚医疗中心",
+      visitSite: "访问官方网站"
     },
     profile: {
       education: "教育背景",
@@ -291,7 +299,9 @@ export const translations: Record<Language, TranslationStrings> = {
       filterByDay: "நாள் மூலம் வடிகட்டவும்",
       allHospitals: "அனைத்து மருத்துவமனைகள்",
       allDays: "அனைத்து நாட்கள்",
-      viewProfile: "விரிவான விவரக்குறிப்பைக் காண்க"
+      viewProfile: "விரிவான விவரக்குறிப்பைக் காண்க",
+      realWorldSuggestions: "சரிபார்க்கப்பட்ட மலேசிய மருத்துவ மையங்கள்",
+      visitSite: "அதிகாரப்பூர்வ தளத்தைப் பார்வையிடவும்"
     },
     profile: {
       education: "கல்விப் பின்னணி",
