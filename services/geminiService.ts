@@ -35,15 +35,41 @@ export const getSmartDoctorMatch = async (symptoms: string): Promise<MatchResult
   return JSON.parse(response.text || '{}') as MatchResult;
 };
 
-export const getNavigationInstructions = async (destination: string, time: string): Promise<string> => {
+export interface NavigationAdvice {
+  text: string;
+  sources: { title: string; uri: string }[];
+}
+
+export const getNavigationInstructions = async (
+  destination: string, 
+  time: string, 
+  location?: { lat: number; lng: number }
+): Promise<NavigationAdvice> => {
+  const userLocStr = location ? `from coordinates (${location.lat}, ${location.lng})` : 'within the Klang Valley/relevant area';
+  
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
-    contents: `The user has an appointment at "${destination}" at "${time}". Provide specific Malaysian transport advice including: 
-    1. Typical traffic conditions (mention highways like LDP, Federal, or MEX if relevant to KL/Selangor).
-    2. Public transport options (LRT, MRT, KTM).
-    3. Grab estimate tips. 
-    Keep it concise and helpful for a Malaysian local.`,
+    contents: `The user has an appointment at "${destination}" at "${time}" ${userLocStr}. 
+    Search for current traffic reports, road closures, or major construction (e.g., MRT/LRT works) in this area of Malaysia today.
+    Provide specific transport advice:
+    1. Realistic travel time estimate considering the specific time of day (e.g., peak hour bottlenecks like Federal Highway, LDP, or SPRINT).
+    2. Any real-time incidents or road closures found.
+    3. Optimal transport mode (Grab vs MRT vs Driving) for this specific timing.
+    Keep it concise and practical for a Malaysian local.`,
+    config: {
+      tools: [{ googleSearch: {} }],
+    },
   });
 
-  return response.text;
+  const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks
+    ?.filter(chunk => chunk.web)
+    .map(chunk => ({
+      title: chunk.web?.title || 'Source',
+      uri: chunk.web?.uri || ''
+    })) || [];
+
+  return {
+    text: response.text,
+    sources
+  };
 };

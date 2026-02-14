@@ -13,11 +13,16 @@ import {
   Train,
   Bell,
   Sun,
-  Moon
+  Moon,
+  ExternalLink,
+  Activity,
+  Languages,
+  ChevronDown
 } from 'lucide-react';
 import { Specialty, Doctor, MatchResult, Appointment } from './types';
 import { MOCK_DOCTORS } from './constants';
-import { getSmartDoctorMatch, getNavigationInstructions } from './services/geminiService';
+import { getSmartDoctorMatch, getNavigationInstructions, NavigationAdvice } from './services/geminiService';
+import { translations, Language } from './translations';
 
 const App: React.FC = () => {
   const [step, setStep] = useState(1);
@@ -28,7 +33,23 @@ const App: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
   const [appointment, setAppointment] = useState<Appointment | null>(null);
-  const [navigationTips, setNavigationTips] = useState('');
+  const [navigationAdvice, setNavigationAdvice] = useState<NavigationAdvice | null>(null);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | undefined>();
+  const [showLangMenu, setShowLangMenu] = useState(false);
+  
+  const [lang, setLang] = useState<Language>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('language') as Language;
+      if (saved && translations[saved]) return saved;
+      
+      const browserLang = navigator.language.split('-')[0];
+      if (browserLang === 'ms') return 'ms';
+      if (browserLang === 'zh') return 'zh';
+      if (browserLang === 'ta') return 'ta';
+    }
+    return 'en';
+  });
+
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('theme');
@@ -36,6 +57,8 @@ const App: React.FC = () => {
     }
     return false;
   });
+
+  const t = translations[lang];
 
   useEffect(() => {
     if (isDarkMode) {
@@ -46,6 +69,19 @@ const App: React.FC = () => {
       localStorage.setItem('theme', 'light');
     }
   }, [isDarkMode]);
+
+  useEffect(() => {
+    localStorage.setItem('language', lang);
+  }, [lang]);
+
+  useEffect(() => {
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        (err) => console.log("Geolocation blocked or failed", err)
+      );
+    }
+  }, []);
 
   const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
 
@@ -85,8 +121,8 @@ const App: React.FC = () => {
     };
     
     try {
-      const tips = await getNavigationInstructions(selectedDoctor.hospital, selectedTime);
-      setNavigationTips(tips);
+      const advice = await getNavigationInstructions(selectedDoctor.hospital, selectedTime, userLocation);
+      setNavigationAdvice(advice);
       setAppointment(newAppt);
       setStep(4);
     } catch (error) {
@@ -94,6 +130,13 @@ const App: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const langNames = {
+    en: "English",
+    ms: "Bahasa Malaysia",
+    zh: "中文",
+    ta: "தமிழ்"
   };
 
   return (
@@ -108,13 +151,43 @@ const App: React.FC = () => {
             <span>MyKlinik</span>
           </div>
           
-          <div className="hidden md:flex gap-8 text-slate-600 dark:text-slate-300 font-medium">
-            <a href="#" className="hover:text-teal-600 dark:hover:text-teal-400 transition">Hospitals</a>
-            <a href="#" className="hover:text-teal-600 dark:hover:text-teal-400 transition">Specialists</a>
-            <a href="#" className="hover:text-teal-600 dark:hover:text-teal-400 transition">Emergency</a>
+          <div className="hidden lg:flex gap-8 text-slate-600 dark:text-slate-300 font-medium">
+            <a href="#" className="hover:text-teal-600 dark:hover:text-teal-400 transition">{t.navbar.hospitals}</a>
+            <a href="#" className="hover:text-teal-600 dark:hover:text-teal-400 transition">{t.navbar.specialists}</a>
+            <a href="#" className="hover:text-teal-600 dark:hover:text-teal-400 transition">{t.navbar.emergency}</a>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-4">
+            {/* Language Switcher */}
+            <div className="relative">
+              <button 
+                onClick={() => setShowLangMenu(!showLangMenu)}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition"
+              >
+                <Languages size={18} />
+                <span className="hidden sm:inline font-medium uppercase">{lang}</span>
+                <ChevronDown size={14} className={`transition-transform ${showLangMenu ? 'rotate-180' : ''}`} />
+              </button>
+              
+              {showLangMenu && (
+                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-xl shadow-2xl z-[60] py-2 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                  {(Object.keys(langNames) as Language[]).map((l) => (
+                    <button
+                      key={l}
+                      onClick={() => {
+                        setLang(l);
+                        setShowLangMenu(false);
+                      }}
+                      className={`w-full px-4 py-2.5 text-left flex items-center justify-between hover:bg-teal-50 dark:hover:bg-teal-900/30 transition ${lang === l ? 'text-teal-600 dark:text-teal-400 font-bold bg-teal-50/50 dark:bg-teal-900/10' : 'text-slate-600 dark:text-slate-300'}`}
+                    >
+                      <span>{langNames[l]}</span>
+                      {lang === l && <CheckCircle size={14} />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <button 
               onClick={toggleDarkMode}
               className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition"
@@ -122,8 +195,8 @@ const App: React.FC = () => {
             >
               {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
             </button>
-            <button className="bg-teal-600 dark:bg-teal-500 text-white px-5 py-2 rounded-full font-medium hover:bg-teal-700 dark:hover:bg-teal-600 transition">
-              My Profile
+            <button className="hidden sm:block bg-teal-600 dark:bg-teal-500 text-white px-5 py-2 rounded-full font-medium hover:bg-teal-700 dark:hover:bg-teal-600 transition">
+              {t.navbar.profile}
             </button>
           </div>
         </div>
@@ -150,15 +223,15 @@ const App: React.FC = () => {
         {/* Step 1: Symptom Entry */}
         {step === 1 && (
           <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800 transition-colors">
-            <h1 className="text-3xl font-bold mb-2">How are you feeling today?</h1>
-            <p className="text-slate-500 dark:text-slate-400 mb-8">Describe your symptoms and our AI will match you with the right Malaysian specialist.</p>
+            <h1 className="text-3xl font-bold mb-2">{t.hero.title}</h1>
+            <p className="text-slate-500 dark:text-slate-400 mb-8">{t.hero.subtitle}</p>
             
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Symptoms or Ailment</label>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">{t.hero.symptomsLabel}</label>
                 <textarea 
-                  className="w-full bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border rounded-xl p-4 min-h-[150px] focus:ring-2 focus:ring-teal-500 outline-none border-slate-200 dark:border-slate-700 transition"
-                  placeholder="e.g. Having sharp chest pain when breathing, feeling nauseous for the past 2 days..."
+                  className="w-full bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border rounded-xl p-4 min-h-[150px] focus:ring-2 focus:ring-teal-500 outline-none border-slate-200 dark:border-slate-700 transition shadow-sm"
+                  placeholder={t.hero.placeholder}
                   value={symptoms}
                   onChange={(e) => setSymptoms(e.target.value)}
                 />
@@ -169,9 +242,9 @@ const App: React.FC = () => {
                 disabled={loading || !symptoms.trim()}
                 className="w-full bg-teal-600 dark:bg-teal-500 text-white py-4 rounded-xl font-bold text-lg hover:bg-teal-700 dark:hover:bg-teal-600 disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg hover:shadow-teal-200 dark:hover:shadow-teal-900 transition-all"
               >
-                {loading ? 'Analyzing Symptoms...' : (
+                {loading ? t.hero.analyzing : (
                   <>
-                    Find Best Specialist <Search size={20} />
+                    {t.hero.button} <Search size={20} />
                   </>
                 )}
               </button>
@@ -188,20 +261,20 @@ const App: React.FC = () => {
                   <AlertCircle size={28} />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-teal-900 dark:text-teal-300">AI Recommendation: {matchResult.recommendedSpecialty}</h2>
+                  <h2 className="text-xl font-bold text-teal-900 dark:text-teal-300">{t.matching.aiRecommendation}: {matchResult.recommendedSpecialty}</h2>
                   <p className="text-teal-800 dark:text-teal-400 mt-1">{matchResult.reasoning}</p>
                   <div className={`mt-3 inline-flex items-center px-3 py-1 rounded-full text-sm font-bold ${
                     matchResult.urgency === 'High' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' : 
                     matchResult.urgency === 'Medium' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300' : 
                     'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
                   }`}>
-                    Urgency: {matchResult.urgency}
+                    {t.matching.urgency}: {matchResult.urgency}
                   </div>
                 </div>
               </div>
             </div>
 
-            <h3 className="text-2xl font-bold mt-8">Available Doctors Near You</h3>
+            <h3 className="text-2xl font-bold mt-8">{t.matching.availableDoctors}</h3>
             <div className="grid gap-4">
               {MOCK_DOCTORS.filter(d => d.specialty === matchResult.recommendedSpecialty || d.specialty === Specialty.GENERAL_PRACTICE).map(doc => (
                 <div 
@@ -214,7 +287,7 @@ const App: React.FC = () => {
                     <div className="flex justify-between items-start">
                       <div>
                         <h4 className="text-xl font-bold group-hover:text-teal-600 dark:group-hover:text-teal-400 transition">{doc.name}</h4>
-                        <p className="text-slate-500 dark:text-slate-400 font-medium">{doc.specialty} • {doc.experience} years exp</p>
+                        <p className="text-slate-500 dark:text-slate-400 font-medium">{doc.specialty} • {doc.experience} {t.matching.exp}</p>
                       </div>
                       <div className="flex items-center gap-1 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 px-2 py-1 rounded-lg font-bold">
                         ★ {doc.rating}
@@ -222,7 +295,7 @@ const App: React.FC = () => {
                     </div>
                     <div className="mt-4 flex flex-wrap gap-4 text-sm text-slate-600 dark:text-slate-400">
                       <div className="flex items-center gap-1"><MapPin size={16} className="text-teal-600 dark:text-teal-400" /> {doc.hospital}</div>
-                      <div className="flex items-center gap-1"><Calendar size={16} className="text-teal-600 dark:text-teal-400" /> Available {doc.availability.join(', ')}</div>
+                      <div className="flex items-center gap-1"><Calendar size={16} className="text-teal-600 dark:text-teal-400" /> {t.matching.availableOn} {doc.availability.join(', ')}</div>
                     </div>
                   </div>
                   <div className="flex items-center justify-center">
@@ -233,34 +306,34 @@ const App: React.FC = () => {
                 </div>
               ))}
             </div>
-            <button onClick={() => setStep(1)} className="text-slate-500 dark:text-slate-400 font-medium hover:text-teal-600 dark:hover:text-teal-400 transition">← Change Symptoms</button>
+            <button onClick={() => setStep(1)} className="text-slate-500 dark:text-slate-400 font-medium hover:text-teal-600 dark:hover:text-teal-400 transition">{t.matching.changeSymptoms}</button>
           </div>
         )}
 
         {/* Step 3: Schedule Appointment */}
         {step === 3 && selectedDoctor && (
           <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800 transition-colors">
-            <h2 className="text-2xl font-bold mb-6">Schedule with {selectedDoctor.name}</h2>
+            <h2 className="text-2xl font-bold mb-6">{t.booking.scheduleTitle} {selectedDoctor.name}</h2>
             
             <div className="space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Preferred Date</label>
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">{t.booking.dateLabel}</label>
                   <input 
                     type="date" 
-                    className="w-full bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border rounded-xl p-4 focus:ring-2 focus:ring-teal-500 outline-none border-slate-200 dark:border-slate-700 transition"
+                    className="w-full bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border rounded-xl p-4 focus:ring-2 focus:ring-teal-500 outline-none border-slate-200 dark:border-slate-700 transition shadow-sm"
                     onChange={(e) => setSelectedDate(e.target.value)}
                     value={selectedDate}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Available Slot</label>
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">{t.booking.slotLabel}</label>
                   <select 
-                    className="w-full bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border rounded-xl p-4 focus:ring-2 focus:ring-teal-500 outline-none border-slate-200 dark:border-slate-700 transition"
+                    className="w-full bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border rounded-xl p-4 focus:ring-2 focus:ring-teal-500 outline-none border-slate-200 dark:border-slate-700 transition shadow-sm"
                     onChange={(e) => setSelectedTime(e.target.value)}
                     value={selectedTime}
                   >
-                    <option value="">Select Time</option>
+                    <option value="">{t.booking.selectTime}</option>
                     <option value="09:00 AM">09:00 AM</option>
                     <option value="10:30 AM">10:30 AM</option>
                     <option value="02:00 PM">02:00 PM</option>
@@ -270,8 +343,8 @@ const App: React.FC = () => {
               </div>
 
               <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-xl border border-dashed border-slate-300 dark:border-slate-700">
-                <h4 className="font-bold flex items-center gap-2 mb-2 text-slate-800 dark:text-slate-200"><Bell size={18} className="text-teal-600 dark:text-teal-400" /> Smart Reminders</h4>
-                <p className="text-slate-600 dark:text-slate-400 text-sm">We'll automatically set reminders via SMS & Email. You'll be notified 2 hours before the appointment with live traffic updates.</p>
+                <h4 className="font-bold flex items-center gap-2 mb-2 text-slate-800 dark:text-slate-200"><Bell size={18} className="text-teal-600 dark:text-teal-400" /> {t.booking.remindersTitle}</h4>
+                <p className="text-slate-600 dark:text-slate-400 text-sm">{t.booking.remindersText}</p>
               </div>
 
               <div className="flex gap-4">
@@ -279,14 +352,14 @@ const App: React.FC = () => {
                   onClick={() => setStep(2)}
                   className="flex-1 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 py-4 rounded-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition"
                 >
-                  Back
+                  {t.booking.back}
                 </button>
                 <button 
                   onClick={handleConfirmAppointment}
                   disabled={!selectedDate || !selectedTime || loading}
                   className="flex-[2] bg-teal-600 dark:bg-teal-500 text-white py-4 rounded-xl font-bold hover:bg-teal-700 dark:hover:bg-teal-600 disabled:opacity-50 shadow-lg transition"
                 >
-                  {loading ? 'Finalizing...' : 'Confirm Appointment'}
+                  {loading ? t.booking.finalizing : t.booking.confirm}
                 </button>
               </div>
             </div>
@@ -300,46 +373,72 @@ const App: React.FC = () => {
               <div className="w-20 h-20 bg-teal-100 dark:bg-teal-900 text-teal-600 dark:text-teal-400 rounded-full flex items-center justify-center mx-auto mb-6">
                 <CheckCircle size={48} />
               </div>
-              <h2 className="text-3xl font-bold text-slate-900 dark:text-white">Appointment Confirmed!</h2>
-              <p className="text-slate-500 dark:text-slate-400 mt-2">Your booking reference: <span className="font-mono font-bold text-teal-600 dark:text-teal-400 uppercase">{appointment.id}</span></p>
+              <h2 className="text-3xl font-bold text-slate-900 dark:text-white">{t.confirmation.title}</h2>
+              <p className="text-slate-500 dark:text-slate-400 mt-2">{t.confirmation.reference} <span className="font-mono font-bold text-teal-600 dark:text-teal-400 uppercase">{appointment.id}</span></p>
               
               <div className="mt-8 p-6 bg-slate-50 dark:bg-slate-800 rounded-xl grid grid-cols-2 text-left gap-4">
                 <div>
-                  <p className="text-xs uppercase font-bold text-slate-400 dark:text-slate-500">Doctor</p>
+                  <p className="text-xs uppercase font-bold text-slate-400 dark:text-slate-500">{t.confirmation.doctorLabel}</p>
                   <p className="font-bold text-slate-800 dark:text-slate-100">{selectedDoctor.name}</p>
                 </div>
                 <div>
-                  <p className="text-xs uppercase font-bold text-slate-400 dark:text-slate-500">Date & Time</p>
+                  <p className="text-xs uppercase font-bold text-slate-400 dark:text-slate-500">{t.confirmation.dateTimeLabel}</p>
                   <p className="font-bold text-slate-800 dark:text-slate-100">{appointment.date} @ {appointment.time}</p>
                 </div>
                 <div className="col-span-2">
-                  <p className="text-xs uppercase font-bold text-slate-400 dark:text-slate-500">Location</p>
+                  <p className="text-xs uppercase font-bold text-slate-400 dark:text-slate-500">{t.confirmation.locationLabel}</p>
                   <p className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1"><MapPin size={14} /> {selectedDoctor.hospital}</p>
                 </div>
               </div>
             </div>
 
             <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800 transition-colors">
-              <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
-                <Car className="text-teal-600 dark:text-teal-400" /> Getting There (Navigation Advice)
-              </h3>
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold flex items-center gap-2">
+                  <Car className="text-teal-600 dark:text-teal-400" /> {t.confirmation.gettingThere}
+                </h3>
+                <div className="flex items-center gap-2 px-3 py-1 bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-400 rounded-full text-xs font-bold animate-pulse">
+                  <Activity size={14} /> {t.confirmation.liveTraffic}
+                </div>
+              </div>
               
-              <div className="prose prose-teal dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 whitespace-pre-line leading-relaxed">
-                {navigationTips}
+              <div className="prose prose-teal dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 whitespace-pre-line leading-relaxed mb-6">
+                {navigationAdvice?.text}
               </div>
 
-              <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
-                <button className="flex flex-col items-center gap-2 p-4 border dark:border-slate-700 rounded-xl hover:bg-teal-50 dark:hover:bg-teal-900/20 hover:border-teal-200 dark:hover:border-teal-800 transition">
-                  <MapPin className="text-teal-600 dark:text-teal-400" />
-                  <span className="font-bold text-sm">Open Maps</span>
+              {navigationAdvice?.sources && navigationAdvice.sources.length > 0 && (
+                <div className="mb-8 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border dark:border-slate-800">
+                  <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase mb-3 flex items-center gap-1">
+                    <ExternalLink size={12} /> {t.confirmation.sourcesLabel}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {navigationAdvice.sources.map((source, i) => (
+                      <a 
+                        key={i} 
+                        href={source.uri} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-xs px-3 py-1.5 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-lg text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 transition-all flex items-center gap-1"
+                      >
+                        {source.title.length > 25 ? source.title.substring(0, 25) + '...' : source.title} <ChevronRight size={10} />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <button className="flex flex-col items-center gap-2 p-4 border dark:border-slate-700 rounded-xl hover:bg-teal-50 dark:hover:bg-teal-900/20 hover:border-teal-200 dark:hover:border-teal-800 transition group">
+                  <MapPin className="text-teal-600 dark:text-teal-400 group-hover:scale-110 transition" />
+                  <span className="font-bold text-sm">Google Maps</span>
                 </button>
-                <button className="flex flex-col items-center gap-2 p-4 border dark:border-slate-700 rounded-xl hover:bg-teal-50 dark:hover:bg-teal-900/20 hover:border-teal-200 dark:hover:border-teal-800 transition">
-                  <Car className="text-teal-600 dark:text-teal-400" />
+                <button className="flex flex-col items-center gap-2 p-4 border dark:border-slate-700 rounded-xl hover:bg-teal-50 dark:hover:bg-teal-900/20 hover:border-teal-200 dark:hover:border-teal-800 transition group">
+                  <Car className="text-teal-600 dark:text-teal-400 group-hover:scale-110 transition" />
                   <span className="font-bold text-sm">Book Grab</span>
                 </button>
-                <button className="flex flex-col items-center gap-2 p-4 border dark:border-slate-700 rounded-xl hover:bg-teal-50 dark:hover:bg-teal-900/20 hover:border-teal-200 dark:hover:border-teal-800 transition">
-                  <Train className="text-teal-600 dark:text-teal-400" />
-                  <span className="font-bold text-sm">Nearby LRT/MRT</span>
+                <button className="flex flex-col items-center gap-2 p-4 border dark:border-slate-700 rounded-xl hover:bg-teal-50 dark:hover:bg-teal-900/20 hover:border-teal-200 dark:hover:border-teal-800 transition group">
+                  <Train className="text-teal-600 dark:text-teal-400 group-hover:scale-110 transition" />
+                  <span className="font-bold text-sm">LRT/MRT Pulse</span>
                 </button>
               </div>
             </div>
@@ -348,7 +447,7 @@ const App: React.FC = () => {
               onClick={() => window.location.reload()}
               className="w-full py-4 text-slate-500 dark:text-slate-400 font-medium hover:text-teal-600 dark:hover:text-teal-400 transition"
             >
-              Start New Inquiry
+              {t.confirmation.newInquiry}
             </button>
           </div>
         )}
@@ -367,7 +466,7 @@ const App: React.FC = () => {
             </p>
           </div>
           <div>
-            <h4 className="font-bold mb-4">Services</h4>
+            <h4 className="font-bold mb-4">{t.navbar.hospitals}</h4>
             <ul className="space-y-2 text-slate-400">
               <li><a href="#" className="hover:text-teal-400 transition">Tele-consultation</a></li>
               <li><a href="#" className="hover:text-teal-400 transition">Health Screening</a></li>
