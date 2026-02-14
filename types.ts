@@ -10,6 +10,13 @@ export enum Specialty {
   OPHTHALMOLOGY = 'Ophthalmology'
 }
 
+export interface Testimonial {
+  name: string;
+  comment: string;
+  rating: number;
+  date: string;
+}
+
 export interface Doctor {
   id: string;
   name: string;
@@ -20,6 +27,9 @@ export interface Doctor {
   availability: string[]; // e.g., ["Monday", "Wednesday"]
   experience: number;
   image: string;
+  education: string[];
+  affiliations: string[];
+  testimonials: Testimonial[];
 }
 
 export interface Appointment {

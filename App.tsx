@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Heart, 
   Search, 
@@ -17,12 +17,45 @@ import {
   ExternalLink,
   Activity,
   Languages,
-  ChevronDown
+  ChevronDown,
+  Filter,
+  Stethoscope,
+  Hospital as HospitalIcon,
+  GraduationCap,
+  Award,
+  MessageSquareQuote,
+  ArrowLeft,
+  Star
 } from 'lucide-react';
-import { Specialty, Doctor, MatchResult, Appointment } from './types';
+import { Specialty, Doctor, MatchResult, Appointment, Testimonial } from './types';
 import { MOCK_DOCTORS } from './constants';
 import { getSmartDoctorMatch, getNavigationInstructions, NavigationAdvice } from './services/geminiService';
 import { translations, Language } from './translations';
+
+const CyberLogo: React.FC<{ className?: string }> = ({ className = "w-10 h-10" }) => (
+  <div className={`relative flex items-center justify-center ${className}`}>
+    {/* Stylized Hospital Building Background */}
+    <div className="absolute inset-0 bg-slate-200 dark:bg-slate-700 rounded-lg overflow-hidden border border-slate-300 dark:border-slate-600">
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-4 h-2 bg-slate-400 dark:bg-slate-500 rounded-b"></div>
+      <div className="grid grid-cols-3 gap-1 p-1 mt-2">
+        <div className="h-1 bg-white dark:bg-slate-800 opacity-50"></div>
+        <div className="h-1 bg-white dark:bg-slate-800 opacity-50"></div>
+        <div className="h-1 bg-white dark:bg-slate-800 opacity-50"></div>
+      </div>
+    </div>
+    {/* The Heart/Stethoscope Overlay Centerpiece */}
+    <div className="relative z-10 w-7 h-7 bg-[#fee2e2] rounded-full flex items-center justify-center shadow-sm">
+      <Heart className="text-red-500 fill-red-500" size={16} />
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="w-full h-px bg-red-600/30 rotate-45"></div>
+      </div>
+    </div>
+    {/* Small Cross Top */}
+    <div className="absolute -top-1 left-1/2 -translate-x-1/2 bg-white dark:bg-slate-900 rounded-full p-0.5 border border-slate-200 dark:border-slate-700">
+      <div className="w-2 h-2 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold text-[8px]">+</div>
+    </div>
+  </div>
+);
 
 const App: React.FC = () => {
   const [step, setStep] = useState(1);
@@ -36,7 +69,12 @@ const App: React.FC = () => {
   const [navigationAdvice, setNavigationAdvice] = useState<NavigationAdvice | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | undefined>();
   const [showLangMenu, setShowLangMenu] = useState(false);
+  const [viewingProfile, setViewingProfile] = useState(false);
   
+  // Filtering States
+  const [hospitalFilter, setHospitalFilter] = useState('');
+  const [dayFilter, setDayFilter] = useState('');
+
   const [lang, setLang] = useState<Language>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('language') as Language;
@@ -91,6 +129,8 @@ const App: React.FC = () => {
     try {
       const result = await getSmartDoctorMatch(symptoms);
       setMatchResult(result);
+      setHospitalFilter(''); // Reset filters on new match
+      setDayFilter('');
       setStep(2);
     } catch (error) {
       console.error("Matching failed", error);
@@ -101,6 +141,11 @@ const App: React.FC = () => {
 
   const handleSelectDoctor = (doc: Doctor) => {
     setSelectedDoctor(doc);
+    setViewingProfile(true);
+  };
+
+  const startBooking = () => {
+    setViewingProfile(false);
     setStep(3);
   };
 
@@ -132,6 +177,27 @@ const App: React.FC = () => {
     }
   };
 
+  // Memoized Filter Data
+  const filteredDoctors = useMemo(() => {
+    if (!matchResult) return [];
+    return MOCK_DOCTORS.filter(doc => {
+      const matchesSpecialty = doc.specialty === matchResult.recommendedSpecialty || doc.specialty === Specialty.GENERAL_PRACTICE;
+      const matchesHospital = hospitalFilter === '' || doc.hospital === hospitalFilter;
+      const matchesDay = dayFilter === '' || doc.availability.includes(dayFilter);
+      return matchesSpecialty && matchesHospital && matchesDay;
+    });
+  }, [matchResult, hospitalFilter, dayFilter]);
+
+  const uniqueHospitals = useMemo(() => {
+    return Array.from(new Set(MOCK_DOCTORS.map(d => d.hospital))).sort();
+  }, []);
+
+  const uniqueDays = useMemo(() => {
+    const days = new Set<string>();
+    MOCK_DOCTORS.forEach(d => d.availability.forEach(day => days.add(day)));
+    return Array.from(days).sort();
+  }, []);
+
   const langNames = {
     en: "English",
     ms: "Bahasa Malaysia",
@@ -144,11 +210,12 @@ const App: React.FC = () => {
       {/* Navbar */}
       <nav className="bg-white dark:bg-slate-900 border-b dark:border-slate-800 sticky top-0 z-50 transition-colors">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-teal-600 dark:text-teal-400 font-bold text-xl cursor-pointer" onClick={() => window.location.reload()}>
-            <div className="w-10 h-10 bg-teal-600 dark:bg-teal-500 rounded-lg flex items-center justify-center text-white">
-              <Heart fill="currentColor" size={24} />
+          <div className="flex items-center gap-3 cursor-pointer group" onClick={() => window.location.reload()}>
+            <CyberLogo className="w-10 h-10 group-hover:scale-110 transition-transform duration-300" />
+            <div className="flex flex-col leading-none">
+              <span className="text-xl font-black tracking-tighter text-slate-800 dark:text-white uppercase">Cyber</span>
+              <span className="text-[10px] font-bold tracking-[0.2em] text-teal-600 dark:text-teal-400 uppercase">Hospitals</span>
             </div>
-            <span>MyKlinik</span>
           </div>
           
           <div className="hidden lg:flex gap-8 text-slate-600 dark:text-slate-300 font-medium">
@@ -253,7 +320,7 @@ const App: React.FC = () => {
         )}
 
         {/* Step 2: Specialist Matching */}
-        {step === 2 && matchResult && (
+        {step === 2 && matchResult && !viewingProfile && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="bg-teal-50 dark:bg-teal-900/20 border border-teal-100 dark:border-teal-900/50 p-6 rounded-2xl">
               <div className="flex items-start gap-4">
@@ -274,39 +341,184 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            <h3 className="text-2xl font-bold mt-8">{t.matching.availableDoctors}</h3>
-            <div className="grid gap-4">
-              {MOCK_DOCTORS.filter(d => d.specialty === matchResult.recommendedSpecialty || d.specialty === Specialty.GENERAL_PRACTICE).map(doc => (
-                <div 
-                  key={doc.id}
-                  className="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl p-6 flex flex-col md:flex-row gap-6 hover:shadow-xl dark:hover:shadow-teal-950/20 hover:border-teal-200 dark:hover:border-teal-800 transition-all cursor-pointer group"
-                  onClick={() => handleSelectDoctor(doc)}
-                >
-                  <img src={doc.image} alt={doc.name} className="w-24 h-24 rounded-2xl object-cover bg-slate-100 dark:bg-slate-800" />
-                  <div className="flex-grow">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h4 className="text-xl font-bold group-hover:text-teal-600 dark:group-hover:text-teal-400 transition">{doc.name}</h4>
-                        <p className="text-slate-500 dark:text-slate-400 font-medium">{doc.specialty} • {doc.experience} {t.matching.exp}</p>
-                      </div>
-                      <div className="flex items-center gap-1 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 px-2 py-1 rounded-lg font-bold">
-                        ★ {doc.rating}
-                      </div>
-                    </div>
-                    <div className="mt-4 flex flex-wrap gap-4 text-sm text-slate-600 dark:text-slate-400">
-                      <div className="flex items-center gap-1"><MapPin size={16} className="text-teal-600 dark:text-teal-400" /> {doc.hospital}</div>
-                      <div className="flex items-center gap-1"><Calendar size={16} className="text-teal-600 dark:text-teal-400" /> {t.matching.availableOn} {doc.availability.join(', ')}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-center">
-                    <button className="bg-slate-100 dark:bg-slate-800 p-3 rounded-xl group-hover:bg-teal-600 dark:group-hover:bg-teal-500 group-hover:text-white transition">
-                      <ChevronRight size={24} />
-                    </button>
-                  </div>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mt-8">
+              <h3 className="text-2xl font-bold">{t.matching.availableDoctors}</h3>
+              
+              {/* Filters Bar */}
+              <div className="flex flex-wrap gap-2">
+                <div className="relative">
+                  <select 
+                    value={hospitalFilter}
+                    onChange={(e) => setHospitalFilter(e.target.value)}
+                    className="appearance-none bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-lg pl-8 pr-8 py-2 text-sm font-medium focus:ring-2 focus:ring-teal-500 outline-none transition"
+                  >
+                    <option value="">{t.matching.allHospitals}</option>
+                    {uniqueHospitals.map(h => <option key={h} value={h}>{h}</option>)}
+                  </select>
+                  <MapPin size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-teal-600 dark:text-teal-400" />
+                  <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
                 </div>
-              ))}
+
+                <div className="relative">
+                  <select 
+                    value={dayFilter}
+                    onChange={(e) => setDayFilter(e.target.value)}
+                    className="appearance-none bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-lg pl-8 pr-8 py-2 text-sm font-medium focus:ring-2 focus:ring-teal-500 outline-none transition"
+                  >
+                    <option value="">{t.matching.allDays}</option>
+                    {uniqueDays.map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                  <Calendar size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-teal-600 dark:text-teal-400" />
+                  <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-4">
+              {filteredDoctors.length > 0 ? (
+                filteredDoctors.map(doc => (
+                  <div 
+                    key={doc.id}
+                    className="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-2xl p-6 flex flex-col md:flex-row gap-6 hover:shadow-xl dark:hover:shadow-teal-950/20 hover:border-teal-200 dark:hover:border-teal-800 transition-all cursor-pointer group"
+                    onClick={() => handleSelectDoctor(doc)}
+                  >
+                    <img src={doc.image} alt={doc.name} className="w-24 h-24 rounded-2xl object-cover bg-slate-100 dark:bg-slate-800" />
+                    <div className="flex-grow">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="text-xl font-bold group-hover:text-teal-600 dark:group-hover:text-teal-400 transition">{doc.name}</h4>
+                          <p className="text-slate-500 dark:text-slate-400 font-medium">{doc.specialty} • {doc.experience} {t.matching.exp}</p>
+                        </div>
+                        <div className="flex items-center gap-1 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 px-2 py-1 rounded-lg font-bold">
+                          ★ {doc.rating}
+                        </div>
+                      </div>
+                      <div className="mt-4 flex flex-wrap gap-4 text-sm text-slate-600 dark:text-slate-400">
+                        <div className="flex items-center gap-1"><MapPin size={16} className="text-teal-600 dark:text-teal-400" /> {doc.hospital}</div>
+                        <div className="flex items-center gap-1"><Calendar size={16} className="text-teal-600 dark:text-teal-400" /> {t.matching.availableOn} {doc.availability.join(', ')}</div>
+                      </div>
+                      <div className="mt-2 text-xs text-teal-600 dark:text-teal-400 font-semibold uppercase tracking-wider flex items-center gap-1">
+                        <Activity size={12} /> {t.matching.viewProfile}
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-center">
+                      <button className="bg-slate-100 dark:bg-slate-800 p-3 rounded-xl group-hover:bg-teal-600 dark:group-hover:bg-teal-500 group-hover:text-white transition">
+                        <ChevronRight size={24} />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-12 text-center bg-slate-100 dark:bg-slate-900/50 rounded-2xl border border-dashed dark:border-slate-800">
+                  <Filter size={48} className="mx-auto text-slate-300 mb-4" />
+                  <p className="text-slate-500 dark:text-slate-400 font-medium">No doctors found matching your filters.</p>
+                  <button 
+                    onClick={() => {setHospitalFilter(''); setDayFilter('');}}
+                    className="mt-4 text-teal-600 dark:text-teal-400 font-bold hover:underline"
+                  >
+                    Clear Filters
+                  </button>
+                </div>
+              )}
             </div>
             <button onClick={() => setStep(1)} className="text-slate-500 dark:text-slate-400 font-medium hover:text-teal-600 dark:hover:text-teal-400 transition">{t.matching.changeSymptoms}</button>
+          </div>
+        )}
+
+        {/* Doctor Profile View */}
+        {step === 2 && viewingProfile && selectedDoctor && (
+          <div className="animate-in fade-in zoom-in-95 duration-500 space-y-8">
+            <button 
+              onClick={() => setViewingProfile(false)}
+              className="flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-teal-600 dark:hover:text-teal-400 font-medium transition"
+            >
+              <ArrowLeft size={20} /> {t.profile.backToList}
+            </button>
+
+            <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-100 dark:border-slate-800 transition-colors">
+              <div className="h-32 bg-gradient-to-r from-teal-600 to-slate-800"></div>
+              <div className="px-8 pb-8">
+                <div className="relative -mt-16 mb-6">
+                  <img src={selectedDoctor.image} alt={selectedDoctor.name} className="w-32 h-32 rounded-2xl border-4 border-white dark:border-slate-900 shadow-xl object-cover" />
+                  <div className="absolute -bottom-2 -right-2 bg-yellow-400 text-slate-900 px-3 py-1 rounded-full font-bold text-sm flex items-center gap-1 border-2 border-white dark:border-slate-900">
+                    <Star size={14} fill="currentColor" /> {selectedDoctor.rating}
+                  </div>
+                </div>
+
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                  <div>
+                    <h2 className="text-3xl font-black text-slate-900 dark:text-white uppercase">{selectedDoctor.name}</h2>
+                    <p className="text-teal-600 dark:text-teal-400 font-bold text-lg">{selectedDoctor.specialty} Specialist</p>
+                    <div className="flex flex-wrap gap-4 mt-3 text-slate-500 dark:text-slate-400">
+                      <span className="flex items-center gap-1.5"><HospitalIcon size={18} /> {selectedDoctor.hospital}</span>
+                      <span className="flex items-center gap-1.5"><Award size={18} /> {selectedDoctor.experience}+ {t.matching.exp}</span>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={startBooking}
+                    className="bg-teal-600 dark:bg-teal-500 text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-teal-700 dark:hover:bg-teal-600 shadow-lg hover:shadow-teal-500/20 transition-all flex items-center justify-center gap-2"
+                  >
+                    {t.profile.bookNow} <Calendar size={20} />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Education & Affiliations */}
+              <div className="space-y-8">
+                <section className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-xl transition-colors">
+                  <h3 className="text-xl font-bold mb-6 flex items-center gap-3 text-slate-800 dark:text-slate-100">
+                    <GraduationCap className="text-teal-600 dark:text-teal-400" /> {t.profile.education}
+                  </h3>
+                  <ul className="space-y-4">
+                    {selectedDoctor.education.map((item, i) => (
+                      <li key={i} className="flex gap-4 group">
+                        <div className="mt-1.5 w-2 h-2 rounded-full bg-teal-200 dark:bg-teal-800 group-hover:bg-teal-500 transition-colors shrink-0"></div>
+                        <p className="text-slate-600 dark:text-slate-400 leading-relaxed">{item}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+
+                <section className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-xl transition-colors">
+                  <h3 className="text-xl font-bold mb-6 flex items-center gap-3 text-slate-800 dark:text-slate-100">
+                    <Award className="text-teal-600 dark:text-teal-400" /> {t.profile.affiliations}
+                  </h3>
+                  <ul className="space-y-4">
+                    {selectedDoctor.affiliations.map((item, i) => (
+                      <li key={i} className="flex gap-4 group">
+                        <div className="mt-1.5 w-2 h-2 rounded-full bg-teal-200 dark:bg-teal-800 group-hover:bg-teal-500 transition-colors shrink-0"></div>
+                        <p className="text-slate-600 dark:text-slate-400 leading-relaxed">{item}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              </div>
+
+              {/* Testimonials */}
+              <section className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-xl transition-colors h-fit">
+                <h3 className="text-xl font-bold mb-6 flex items-center gap-3 text-slate-800 dark:text-slate-100">
+                  <MessageSquareQuote className="text-teal-600 dark:text-teal-400" /> {t.profile.testimonials}
+                </h3>
+                <div className="space-y-6">
+                  {selectedDoctor.testimonials.map((test, i) => (
+                    <div key={i} className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl relative transition-all hover:translate-x-1 border border-slate-100 dark:border-slate-800">
+                      <div className="flex justify-between items-center mb-3">
+                        <span className="font-bold text-slate-900 dark:text-slate-100">{test.name}</span>
+                        <div className="flex text-yellow-500">
+                          {[...Array(5)].map((_, starIdx) => (
+                            <Star key={starIdx} size={12} fill={starIdx < test.rating ? "currentColor" : "none"} />
+                          ))}
+                        </div>
+                      </div>
+                      <p className="text-slate-600 dark:text-slate-400 text-sm italic leading-relaxed">"{test.comment}"</p>
+                      <div className="mt-3 text-[10px] text-slate-400 dark:text-slate-500 uppercase font-bold tracking-widest">{test.date}</div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </div>
           </div>
         )}
 
@@ -349,7 +561,7 @@ const App: React.FC = () => {
 
               <div className="flex gap-4">
                 <button 
-                  onClick={() => setStep(2)}
+                  onClick={() => {setStep(2); setViewingProfile(true);}}
                   className="flex-1 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 py-4 rounded-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition"
                 >
                   {t.booking.back}
@@ -457,12 +669,15 @@ const App: React.FC = () => {
       <footer className="bg-slate-900 dark:bg-black text-white py-12 px-4 mt-auto transition-colors">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12">
           <div className="col-span-1 md:col-span-2">
-            <div className="flex items-center gap-2 text-white font-bold text-2xl mb-4">
-              <Heart fill="currentColor" size={28} className="text-teal-400" />
-              <span>MyKlinik</span>
+            <div className="flex items-center gap-3 text-white font-bold text-2xl mb-4 group cursor-pointer" onClick={() => window.location.reload()}>
+              <CyberLogo className="w-12 h-12" />
+              <div className="flex flex-col leading-none">
+                <span className="text-2xl font-black tracking-tighter uppercase">Cyber</span>
+                <span className="text-xs font-bold tracking-[0.2em] text-teal-400 uppercase">Hospitals</span>
+              </div>
             </div>
             <p className="text-slate-400 max-w-md">
-              The Malaysian Smart Healthcare Platform. Empowering patients with AI-driven doctor matching and seamless hospital logistics for a healthier nation.
+              The Malaysian Smart Healthcare Platform by Cyber Hospitals. Empowering patients with AI-driven doctor matching and seamless hospital logistics for a healthier nation.
             </p>
           </div>
           <div>
@@ -485,7 +700,7 @@ const App: React.FC = () => {
           </div>
         </div>
         <div className="max-w-7xl mx-auto border-t border-slate-800 dark:border-slate-900 mt-12 pt-8 text-center text-slate-500 text-sm">
-          © {new Date().getFullYear()} MyKlinik Healthcare. All rights reserved. Registered with MOH Malaysia.
+          © {new Date().getFullYear()} Cyber Hospitals Healthcare. All rights reserved. Registered with MOH Malaysia.
         </div>
       </footer>
     </div>

@@ -29,6 +29,18 @@ export interface TranslationStrings {
     exp: string;
     availableOn: string;
     changeSymptoms: string;
+    filterByHospital: string;
+    filterByDay: string;
+    allHospitals: string;
+    allDays: string;
+    viewProfile: string;
+  };
+  profile: {
+    education: string;
+    affiliations: string;
+    testimonials: string;
+    bookNow: string;
+    backToList: string;
   };
   booking: {
     scheduleTitle: string;
@@ -82,7 +94,19 @@ export const translations: Record<Language, TranslationStrings> = {
       availableDoctors: "Available Doctors Near You",
       exp: "years exp",
       availableOn: "Available",
-      changeSymptoms: "← Change Symptoms"
+      changeSymptoms: "← Change Symptoms",
+      filterByHospital: "Filter by Hospital",
+      filterByDay: "Filter by Day",
+      allHospitals: "All Hospitals",
+      allDays: "All Days",
+      viewProfile: "View Detailed Profile"
+    },
+    profile: {
+      education: "Educational Background",
+      affiliations: "Professional Affiliations",
+      testimonials: "Patient Testimonials",
+      bookNow: "Book Appointment Now",
+      backToList: "Back to Doctor List"
     },
     booking: {
       scheduleTitle: "Schedule with",
@@ -134,7 +158,19 @@ export const translations: Record<Language, TranslationStrings> = {
       availableDoctors: "Doktor Tersedia Berdekatan Anda",
       exp: "tahun pengalaman",
       availableOn: "Tersedia",
-      changeSymptoms: "← Tukar Simptom"
+      changeSymptoms: "← Tukar Simptom",
+      filterByHospital: "Tapis mengikut Hospital",
+      filterByDay: "Tapis mengikut Hari",
+      allHospitals: "Semua Hospital",
+      allDays: "Semua Hari",
+      viewProfile: "Lihat Profil Terperinci"
+    },
+    profile: {
+      education: "Latar Belakang Pendidikan",
+      affiliations: "Afiliasi Profesional",
+      testimonials: "Testimoni Pesakit",
+      bookNow: "Tempah Janji Temu Sekarang",
+      backToList: "Kembali ke Senarai Doktor"
     },
     booking: {
       scheduleTitle: "Jadualkan dengan",
@@ -186,7 +222,19 @@ export const translations: Record<Language, TranslationStrings> = {
       availableDoctors: "您附近的可用医生",
       exp: "年经验",
       availableOn: "在职",
-      changeSymptoms: "← 更改症状"
+      changeSymptoms: "← 更改症状",
+      filterByHospital: "按医院筛选",
+      filterByDay: "按天筛选",
+      allHospitals: "所有医院",
+      allDays: "所有日期",
+      viewProfile: "查看详细资料"
+    },
+    profile: {
+      education: "教育背景",
+      affiliations: "专业隶属关系",
+      testimonials: "患者评价",
+      bookNow: "立即预约",
+      backToList: "返回医生列表"
     },
     booking: {
       scheduleTitle: "预约医生：",
@@ -238,7 +286,19 @@ export const translations: Record<Language, TranslationStrings> = {
       availableDoctors: "உங்களுக்கு அருகிலுள்ள மருத்துவர்கள்",
       exp: "ஆண்டுகள் அனுபவம்",
       availableOn: "கிடைக்கும்",
-      changeSymptoms: "← அறிகுறிகளை மாற்றவும்"
+      changeSymptoms: "← அறிகுறிகளை மாற்றவும்",
+      filterByHospital: "மருத்துவமனை மூலம் வடிகட்டவும்",
+      filterByDay: "நாள் மூலம் வடிகட்டவும்",
+      allHospitals: "அனைத்து மருத்துவமனைகள்",
+      allDays: "அனைத்து நாட்கள்",
+      viewProfile: "விரிவான விவரக்குறிப்பைக் காண்க"
+    },
+    profile: {
+      education: "கல்விப் பின்னணி",
+      affiliations: "தொழில்முறை இணைப்புகள்",
+      testimonials: "நோயாளி சான்றுகள்",
+      bookNow: "இப்போதே முன்பதிவு செய்யுங்கள்",
+      backToList: "மருத்துவர் பட்டியலுக்குத் திரும்பு"
     },
     booking: {
       scheduleTitle: "இவருடன் முன்பதிவு செய்யுங்கள்:",
