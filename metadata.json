@@ -1,0 +1,7 @@
+{
+  "name": "MyKlinik - Entry for Krackeddevs hackathon Q1 2026",
+  "description": "An intelligent healthcare matching platform for Malaysian clinics and hospitals, using AI to pair patients with specialists and provide local transport guidance.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
