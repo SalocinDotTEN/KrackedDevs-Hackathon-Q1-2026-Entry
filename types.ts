@@ -17,14 +17,20 @@ export interface Testimonial {
   date: string;
 }
 
+export interface Coordinates {
+  lat: number;
+  lng: number;
+}
+
 export interface Doctor {
   id: string;
   name: string;
   specialty: Specialty;
   hospital: string;
   location: string;
+  coords: Coordinates;
   rating: number;
-  availability: string[]; // e.g., ["Monday", "Wednesday"]
+  availability: string[];
   experience: number;
   image: string;
   education: string[];
@@ -48,6 +54,8 @@ export interface SuggestedFacility {
   name: string;
   type: string;
   highlight: string;
+  coords?: Coordinates;
+  website?: string;
 }
 
 export interface MatchResult {
